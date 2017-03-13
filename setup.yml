@@ -1,0 +1,77 @@
+---
+- hosts: all
+  become: true
+
+  vars:
+    apt_packages:
+      - vim
+      - mosh
+      - rsync
+      - tmux
+      - lftp
+      - nfs-common
+      - sshfs
+      - avahi-daemon
+      - pulseaudio-module-zeroconf
+      - rpi-update
+      - kodi
+      - ntp
+      - avahi-utils
+    wifi_ssid:
+    wifi_password:
+
+    keys:
+      - ~/.ssh/id_rsa.pub
+
+  tasks:
+  - name: Install SSH keys for root user
+    authorized_key: user=root key="{{ lookup('file', '{{item}}') }}"
+    with_items: '{{keys}}'
+
+  - name: Install SSH keys for pi user
+    authorized_key: user=pi key="{{ lookup('file', '{{item}}') }}"
+    with_items: '{{keys}}'
+
+  - name: Install distro APT packages
+    apt: upgrade=dist update_cache=yes update_cache=yes
+
+  - name: Install custom apt packages
+    apt: pkg='{{ item }}' state=latest install_recommends=no
+    with_items: '{{ apt_packages }}'
+
+  - name: Set GPU mem to fix no video output bug in /boot/config.txt
+    lineinfile: dest=/boot/config.txt regexp=^gpu_mem_1024=* line=gpu_mem_1024=160
+    tags: debug
+
+  - name: start avahi on boot
+    service: name=avahi-daemon state=started enabled=yes
+
+  - name: set kodi to enable in /etc/default/kodi
+    lineinfile: dest=/etc/default/kodi regexp=^ENABLED=* line=ENABLED=1
+
+  - name: Start Kodi on boot
+    service: name=kodi state=started enabled=yes
+
+  - name: start NTP service on boot for correct system clock
+    service: name=ntp state=started enabled=yes
+
+  - name: fix udev rule to allow keyboard to work in Kodi for users in input group
+    copy: src=./files/10-inputpermissions.conf dest=/etc/udev/rules.d/ owner=root mode=0644
+
+  - name: add kodi user to input group to fix above
+    user: user=kodi groups=input append=yes
+
+  - name: setup kodi media sources
+    copy: src=./files/sources.xml dest=/home/kodi/.kodi/userdata/ owner=kodi mode=0644
+    notify:
+      - restart kodi
+    tags: update_sources
+
+  - name: Configure Wifi (skipped if no ssid /password given in setup.yml)
+    template: src=./files/wpa_supplicant.conf dest=/tmp/wpa_supplicant.conf
+    when: wifi_ssid is not none and wifi_password is not none
+    tags: wifi
+
+  handlers:
+    - name: restart kodi
+      service: name=kodi state=restarted
