@@ -17,6 +17,7 @@
       - kodi
       - ntp
       - avahi-utils
+      - ca-certificates
     wifi_ssid:
     wifi_password:
 
