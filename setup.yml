@@ -47,20 +47,17 @@
   - name: start avahi on boot
     service: name=avahi-daemon state=started enabled=yes
 
-  - name: set kodi to enable in /etc/default/kodi
-    lineinfile: dest=/etc/default/kodi regexp=^ENABLED=* line=ENABLED=1
+  - name: Add kodi user
+    user: name=kodi createhome=yes password=no system=yes groups=audio,video,input,dialout,plugdev,netdev,users,cdrom,tty
+
+  - name: Create Kodi service
+    copy: src=./files/kodi.service dest=/lib/systemd/system/kodi.service mode=0600 owner=root
 
   - name: Start Kodi on boot
     service: name=kodi state=started enabled=yes
 
   - name: start NTP service on boot for correct system clock
     service: name=ntp state=started enabled=yes
-
-  - name: fix udev rule to allow keyboard to work in Kodi for users in input group
-    copy: src=./files/10-inputpermissions.conf dest=/etc/udev/rules.d/ owner=root mode=0644
-
-  - name: add kodi user to input group to fix above
-    user: user=kodi groups=input append=yes
 
   - name: setup kodi media sources
     copy: src=./files/sources.xml dest=/home/kodi/.kodi/userdata/ owner=kodi mode=0644
