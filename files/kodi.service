@@ -8,6 +8,7 @@ User = kodi
 Group = kodi
 Type = simple
 ExecStart = /usr/bin/kodi
+Restart=on-failure
 
 [Install]
 WantedBy = multi-user.target
