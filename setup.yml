@@ -18,6 +18,8 @@
       - ntp
       - avahi-utils
       - ca-certificates
+      - kodi-vfs-libarchive
+      - kodi-vfs-rar
 
     wifi_ssid:
     wifi_password:
